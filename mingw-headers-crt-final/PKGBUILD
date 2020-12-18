@@ -1,0 +1,222 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+pkgname='i386-mingw32crt-headers-final'
+provides=('i386-mingw32crt-headers')
+conflicts=('i386-mingw32crt-headers-bootstrap' 'i386-mingw32crt-headers-bootstrap2')
+pkgver=5.4.1
+pkgrel=1
+pkgdesc="MinGW32 headers for Windows"
+arch=('any')
+url="http://mingw-w64.sourceforge.net"
+license=('custom')
+groups=('i386-mingw32crt')
+options=('!strip' '!libtool' '!emptydirs')
+validpgpkeys=('CAF5641F74F7DFBA88AE205693BDB53CD4EBC740')
+source=('mingwrt-5.4.1-mingw32-src.tar.xz'
+	'w32api-5.4.1-mingw32-src.tar.xz'
+	'makefile-fix.patch')
+
+sha512sums=('01f67c262b1840cf94cd920523ccd2a1a7e6ffaaa1c420a0c15bed7813c9fad3d57019fdba52090900b6a4ca27636277386873872cdd900e06e4ff4686639cc8'
+		'cc8d771b3cdbf481f9dd443e0f4d5adc8e67bb32b61c36b7a57ea432b6883c86e933b07c62733c43ac258aa4c0204a44ec5655df1268852da817660bf5958d4d'
+		'SKIP')
+
+target="i386-mingw32crt"
+
+
+build() {
+	export CC=i386-mingw32crt-gcc
+	export CXX=i386-mingw32crt-g++
+	export DLLTOOL=i386-mingw32crt-dlltool
+	export AS=i386-mingw32crt-as
+	export AR=i386-mingw32crt-ar
+	export RANLIB=i386-mingw32crt-ranlib
+	export STRIP=i386-mingw32crt-strip
+	export CPPFLAGS=""
+	export CFLAGS="-Os"
+	export CXXLAGS="-Os"
+	export LDFLAGS=""
+
+	cd "$srcdir"/mingwrt-"$pkgver"/
+	patch -p0 < ../makefile-fix.patch
+	mkdir -p build
+	cd build
+	../configure --prefix=/usr/${target} --target="$target" --enable-stage-2=yes
+	make -j1 # Must be -j1 because _mingw.h needs to get generated first.
+
+	cd "$srcdir"/w32api-"$pkgver"/
+	mkdir -p build
+	cd build
+	../configure --prefix=/usr/${target} --target="$target"
+	make -j1
+}
+
+package() {
+	cd "$srcdir"/mingwrt-"$pkgver"/build
+	make DESTDIR=${pkgdir} -j1 install
+	cd "$srcdir"/w32api-"$pkgver"/build
+	make DESTDIR=${pkgdir} -j1 install
+	install -Dm644 "$srcdir"/mingwrt-"$pkgver"/build/features.h "$pkgdir/usr/${target}/include"
+echo "#ifndef ENOTSUP
+#define ENOTSUP         129
+#endif
+
+/* Extension defined as by report VC 10+ defines error-numbers.  */
+
+#ifndef EAFNOSUPPORT
+#define EAFNOSUPPORT 102
+#endif
+
+#ifndef EADDRINUSE
+#define EADDRINUSE 100
+#endif
+
+#ifndef EADDRNOTAVAIL
+#define EADDRNOTAVAIL 101
+#endif
+
+#ifndef EISCONN
+#define EISCONN 113
+#endif
+
+#ifndef ENOBUFS
+#define ENOBUFS 119
+#endif
+
+#ifndef ECONNABORTED
+#define ECONNABORTED 106
+#endif
+
+#ifndef EALREADY
+#define EALREADY 103
+#endif
+
+#ifndef ECONNREFUSED
+#define ECONNREFUSED 107
+#endif
+
+#ifndef ECONNRESET
+#define ECONNRESET 108
+#endif
+
+#ifndef EDESTADDRREQ
+#define EDESTADDRREQ 109
+#endif
+
+#ifndef EHOSTUNREACH
+#define EHOSTUNREACH 110
+#endif
+
+#ifndef EMSGSIZE
+#define EMSGSIZE 115
+#endif
+
+#ifndef ENETDOWN
+#define ENETDOWN 116
+#endif
+
+#ifndef ENETRESET
+#define ENETRESET 117
+#endif
+
+#ifndef ENETUNREACH
+#define ENETUNREACH 118
+#endif
+
+#ifndef ENOPROTOOPT
+#define ENOPROTOOPT 123
+#endif
+
+#ifndef ENOTSOCK
+#define ENOTSOCK 128
+#endif
+
+#ifndef ENOTCONN
+#define ENOTCONN 126
+#endif
+
+#ifndef ECANCELED
+#define ECANCELED 105
+#endif
+
+#ifndef EINPROGRESS
+#define EINPROGRESS 112
+#endif
+
+#ifndef EOPNOTSUPP
+#define EOPNOTSUPP 130
+#endif
+
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK 140
+#endif
+
+#ifndef EOWNERDEAD
+#define EOWNERDEAD 133
+#endif
+
+#ifndef EPROTO
+#define EPROTO 134
+#endif
+
+#ifndef EPROTONOSUPPORT
+#define EPROTONOSUPPORT 135
+#endif
+
+#ifndef EBADMSG
+#define EBADMSG 104
+#endif
+
+#ifndef EIDRM
+#define EIDRM 111
+#endif
+
+#ifndef ENODATA
+#define ENODATA 120
+#endif
+
+#ifndef ENOLINK
+#define ENOLINK 121
+#endif
+
+#ifndef ENOMSG
+#define ENOMSG 122
+#endif
+
+#ifndef ENOSR
+#define ENOSR 124
+#endif
+
+#ifndef ENOSTR
+#define ENOSTR 125
+#endif
+
+#ifndef ENOTRECOVERABLE
+#define ENOTRECOVERABLE 127
+#endif
+
+#ifndef ETIME
+#define ETIME 137
+#endif
+
+#ifndef ETXTBSY
+#define ETXTBSY 139
+#endif
+
+/* Defined as WSAETIMEDOUT.  */
+#ifndef ETIMEDOUT
+#define ETIMEDOUT 138
+#endif
+
+#ifndef ELOOP
+#define ELOOP 114
+#endif
+
+#ifndef EPROTOTYPE
+#define EPROTOTYPE 136
+#endif
+
+#ifndef EOVERFLOW
+#define EOVERFLOW 132
+#endif" >> "$pkgdir/usr/${target}/include/errno.h"
+
+}

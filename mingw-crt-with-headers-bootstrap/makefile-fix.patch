@@ -1,0 +1,11 @@
+--- Makefile.in.bak
++++ Makefile.in
+@@ -453,7 +453,7 @@
+ LIBMINGWEX_MEMALIGN_OBJECTS = $(addsuffix .$(OBJEXT),$(LIBMINGWEX_MEMALIGN))
+ 
+ $(LIBMINGWEX_MEMALIGN_OBJECTS): %.$(OBJEXT): memalign.c
+-	$(CC) -c $(CFLAGS) -D__mingw_$(subst -,_,$*)_case $< -o $@
++	$(CC) -c $(ALL_CFLAGS) -D__mingw_$(subst -,_,$*)_case $< -o $@
+ 
+ libmingwex.a: $(LIBMINGWEX_MEMALIGN_OBJECTS)
+ 

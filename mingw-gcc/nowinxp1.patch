@@ -1,0 +1,14 @@
+--- libstdc++-v3/src/c++17/fs_ops.cc.bak
++++ libstdc++-v3/src/c++17/fs_ops.cc
+@@ -686,11 +686,6 @@
+     ec.assign(errno, std::generic_category());
+   else
+     ec.clear();
+-#elif defined _GLIBCXX_FILESYSTEM_IS_WINDOWS
+-  if (CreateHardLinkW(new_hard_link.c_str(), to.c_str(), NULL))
+-    ec.clear();
+-  else
+-    ec.assign((int)GetLastError(), generic_category());
+ #else
+   ec = std::make_error_code(std::errc::not_supported);
+ #endif

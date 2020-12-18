@@ -1,0 +1,121 @@
+pkgname=i386-mingw32crt-gcc
+conflicts=('i386-mingw32crt-gcc-boostrap')
+pkgver=10.2.0
+_islver=0.23
+pkgrel=2
+pkgdesc="Cross GCC for the MinGW-w64 cross-compiler"
+arch=('x86_64' 'aarch64')
+url="https://gcc.gnu.org"
+license=('GPL' 'LGPL' 'FDL' 'custom')
+groups=('i386-mingw32crt')
+depends=('zlib' 'libmpc' 'mingw-w64-crt' 'mingw-w64-binutils' 'mingw-w64-headers')
+makedepends=("gcc-ada>=${pkgver:0:2}")
+options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
+source=(gcc-$pkgver.tar.xz
+       "http://isl.gforge.inria.fr/isl-${_islver}.tar.xz"
+       https://raw.githubusercontent.com/msys2/MINGW-packages/master/mingw-w64-gcc/0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch
+       "nowinxp1.patch"
+       "nowinxp2.patch"
+       "no_winxp_at_exit.patch"
+       "crtdll_patch.patch"
+)
+sha512sums=('42ae38928bd2e8183af445da34220964eb690b675b1892bbeb7cd5bb62be499011ec9a93397dba5e2fb681afadfc6f2767d03b9035b44ba9be807187ae6dc65e'
+	'da4e7cbd5045d074581d4e1c212acb074a8b2345a96515151b0543cbe2601db6ac2bbd93f9ad6643e98f845b68f438f3882c05b8b90969ae542802a3c78fea20'
+	'SKIP'
+	'SKIP'
+	'SKIP'
+	'SKIP'
+	'SKIP'
+)
+
+_architectures="i386-mingw32crt"
+
+prepare() {
+  ln -sf gcc-${pkgver/+/-} gcc
+  cd gcc
+
+  # https://sourceforge.net/p/mingw-w64/bugs/853/
+  patch -p1 -i ../0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch
+
+  # mmapio.c:69:14: error: implicit declaration of function ‘getpagesize’
+  sed -i 's|\-Werror||g' libbacktrace/configure
+
+  # link isl for in-tree builds
+  ln -sf ../isl-${_islver} isl
+  # Make it fail the LFS test so it works with Windows 98.
+  sed -i 's/fstat64/fstat64fail/g' "libstdc++-v3/configure"
+  sed -i 's/ftruncate64/ftruncate/g' "libstdc++-v3/src/filesystem/ops-common.h"
+
+  # Make it fail any tests relating to wchar.h which doesn't exist in CRTDLL.dll.
+  sed -i 's/wchar\.h/wchar_fail_not_exist\.h/g' "libstdc++-v3/configure"
+  # Do likewise for wctype.h which also relates to wide characters.
+  sed -i 's/wctype\.h/wctype_fail_not_exist\.h/g' "libstdc++-v3/configure"
+
+  # Get rid of a hard coded -lmsvcrt, otherwise the code depends on both CRTDLL.dll and MSVCRT.dll
+  sed -i 's/lmsvcrt/lcrtdll/g' "libgcc/config/i386/t-mingw32"
+
+  patch -p0 -i ../nowinxp1.patch
+  patch -p0 -i ../nowinxp2.patch
+  patch -p0 -i ../no_winxp_at_exit.patch
+  patch -p0 -i ../crtdll_patch.patch
+
+  # Fix build errors.
+  sed -i 's/_off64_t/off64_t/g' libstdc++-v3/src/filesystem/ops-common.h
+
+  # Parts of this code assume wchar even though it's disabled.
+  echo '' > 'libstdc++-v3/src/c++17/fs_ops.cc'
+  echo '' > 'libstdc++-v3/src/c++17/fs_dir.cc'
+  echo '' > 'libstdc++-v3/src/c++17/fs_path.cc'
+}
+
+build() {
+	export ac_cv_func__aligned_malloc=no
+	export ac_cv_func__wfopen=no
+	export ac_cv_header_wchar_h=no
+	export ac_cv_header_wctype_h=no
+	export ac_cv_sys_file_offset_bits=no
+	export ac_has_wchar_h=no
+	export ac_has_wctype_h=no
+	export enable_wchar_t=no
+	export glibcxx_cv_c99_wchar_cxx11=no
+	export glibcxx_cv_c99_wchar_cxx98=no
+	export have_mbstate_t=no
+  for _arch in ${_architectures}; do
+    mkdir -p "$srcdir"/build-${_arch} && cd "$srcdir"/build-${_arch}
+    CFLAGS_FOR_TARGET="-Os -DWINVER=0x0400 -D_WIN32_WINNT=0x0400 -DNTDDI_VERSION=0x04000000" CXXFLAGS_FOR_TARGET="-Os -DWINVER=0x0400 -D_WIN32_WINNT=0x0400 -DNTDDI_VERSION=0x04000000" "$srcdir"/gcc/configure --prefix=/usr --libexecdir=/usr/lib \
+        --target=${_arch} \
+        --with-bugurl=https://bugs.archlinux.org/ \
+        --enable-languages=c,lto,c++ \
+        --enable-shared --enable-static \
+        --enable-threads=win32 --enable-fully-dynamic-string \
+        --enable-libstdcxx-time=yes --enable-libstdcxx-filesystem-ts=no \
+        --with-system-zlib --enable-cloog-backend=isl \
+        --enable-lto --enable-libgomp=no \
+        --disable-multilib --enable-checking=release \
+        --disable-sjlj-exceptions --with-dwarf2 \
+	--enable-gold=yes --enable-ld=yes \
+	--enable-plugin --with-gnu-ld --with-gnu-as \
+	--disable-nls --enable-tls=no --disable-tls \
+	--enable-libssp=no --disable-largefile \
+	--enable-wchar_t=no
+    make
+  done
+}
+
+package() {
+  for _arch in ${_architectures}; do
+    cd "$srcdir"/build-${_arch}
+    make DESTDIR="$pkgdir" install
+    ${_arch}-strip "$pkgdir"/usr/${_arch}/lib/*.dll
+    strip "$pkgdir"/usr/bin/${_arch}-*
+    strip "$pkgdir"/usr/lib/gcc/${_arch}/${pkgver}/{cc1*,collect2,lto*}
+    ln -s ${_arch}-gcc "$pkgdir"/usr/bin/${_arch}-cc
+    # mv dlls
+    mkdir -p "$pkgdir"/usr/${_arch}/bin/
+    mv "$pkgdir"/usr/${_arch}/lib/*.dll "$pkgdir"/usr/${_arch}/bin/
+  done
+  strip "$pkgdir"/usr/bin/*
+  # remove unnecessary files
+  rm -r "$pkgdir"/usr/share
+  rm "$pkgdir"/usr/lib/libcc1.*
+}

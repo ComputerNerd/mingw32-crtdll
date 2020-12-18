@@ -1,0 +1,14 @@
+--- libstdc++-v3/config/os/mingw32-w64/os_defines.h.bak
++++ libstdc++-v3/config/os/mingw32-w64/os_defines.h
+@@ -80,11 +80,6 @@
+ #define _GLIBCXX_USE_WEAK_REF 0
+ #endif
+ 
+-// Enable use of GetModuleHandleEx (requires Windows XP/2003) in
+-// __cxa_thread_atexit to prevent modules from being unloaded before
+-// their dtors are called
+-#define _GLIBCXX_THREAD_ATEXIT_WIN32 1
+-
+ // See libstdc++/59807
+ #define _GTHREAD_USE_MUTEX_INIT_FUNC 1
+ 

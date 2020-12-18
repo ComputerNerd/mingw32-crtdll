@@ -1,0 +1,44 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+pkgname='i386-mingw32crt-headers-bootstrap'
+provides=('i386-mingw32crt-headers')
+conflicts=('i386-mingw32crt-headers')
+pkgver=5.4.1
+pkgrel=1
+pkgdesc="MinGW32 headers for Windows"
+arch=('any')
+url="http://mingw-w64.sourceforge.net"
+license=('custom')
+groups=('i386-mingw32crt')
+options=('!strip' '!libtool' '!emptydirs')
+validpgpkeys=('CAF5641F74F7DFBA88AE205693BDB53CD4EBC740')
+source=('mingwrt-5.4.1-mingw32-src.tar.xz'
+	'w32api-5.4.1-mingw32-src.tar.xz')
+
+sha512sums=('01f67c262b1840cf94cd920523ccd2a1a7e6ffaaa1c420a0c15bed7813c9fad3d57019fdba52090900b6a4ca27636277386873872cdd900e06e4ff4686639cc8'
+            'cc8d771b3cdbf481f9dd443e0f4d5adc8e67bb32b61c36b7a57ea432b6883c86e933b07c62733c43ac258aa4c0204a44ec5655df1268852da817660bf5958d4d')
+
+_targets="i386-mingw32crt"
+
+
+build() {
+	echo "No-op"
+}
+
+package() {
+  for _target in ${_targets}; do
+    echo "Installing ${_target} headers"
+    mkdir -p "$pkgdir/usr/${_target}/include"
+    mkdir -p "$pkgdir/usr/${_target}/include/sys"
+    mkdir -p "$pkgdir/usr/${_target}/include/ddk"
+    mkdir -p "$pkgdir/usr/${_target}/include/gdiplus"
+    mkdir -p "$pkgdir/usr/${_target}/include/GL"
+    install -Dm644 "$srcdir"/mingwrt-"$pkgver"/include/*.h "$pkgdir/usr/${_target}/include"
+    install -Dm644 "$srcdir"/mingwrt-"$pkgver"/include/sys/*.h "$pkgdir/usr/${_target}/include/sys"
+    install -Dm644 "$srcdir"/w32api-"$pkgver"/include/*.h "$pkgdir/usr/${_target}/include"
+    install -Dm644 "$srcdir"/w32api-"$pkgver"/include/ddk/*.h "$pkgdir/usr/${_target}/include/ddk"
+    install -Dm644 "$srcdir"/w32api-"$pkgver"/include/gdiplus/*.h "$pkgdir/usr/${_target}/include/gdiplus"
+    install -Dm644 "$srcdir"/w32api-"$pkgver"/include/GL/*.h "$pkgdir/usr/${_target}/include/GL"
+    #echo "/* Will be replaced later */" > "$pkgdir/usr/${_target}/include/_mingw.h" # This didn't work and it's not needed.
+  done
+}
