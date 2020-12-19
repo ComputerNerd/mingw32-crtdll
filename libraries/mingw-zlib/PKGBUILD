@@ -33,6 +33,7 @@ build() {
 		cd "${srcdir}/build-${_arch}"
 
 		LTO_FLAGS="-Os -s -flto -fuse-linker-plugin -flto-partition=none"
+		LDFLAGS="-Wl,--gc-sections"
 
 		make -f win32/Makefile.gcc \
 			PREFIX=${_arch}- \
@@ -42,7 +43,7 @@ build() {
 			STRIP=${_arch}-strip \
 			IMPLIB=libz.dll.a \
 			CFLAGS="$LTO_FLAGS" \
-			LDFLAGS="$LTO_FLAGS"
+			LDFLAGS="$LTO_FLAGS $LDFLAGS"
 	done
 }
 
