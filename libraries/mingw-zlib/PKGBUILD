@@ -1,51 +1,60 @@
-# Contributor: Daniel Kirchner <daniel AT ekpyron DOT org>
+# Based on the PKGBUILD by contributor: Daniel Kirchner <daniel AT ekpyron DOT org>
 
-pkgname=mingw-w64-zlib
+pkgname=i386-mingw32crt-zlib
 pkgver=1.2.11
 pkgrel=1
 pkgdesc="A compression/decompression Library (mingw-w64)"
 arch=('any')
 license=('custom:zlib')
-depends=(mingw-w64-crt)
-makedepends=(mingw-w64-gcc)
+makedepends=(i386-mingw32crt-gcc)
 url="http://www.zlib.net/"
-source=("http://zlib.net/zlib-${pkgver}.tar.gz")
+source=("http://zlib.net/zlib-${pkgver}.tar.xz"
+	'no-wide-char.patch'
+	'no-gzopen-w-export.patch'
+	)
 options=(!strip !buildflags staticlibs)
-md5sums=('1c9f62f0778697a09d36121ead88e08e')
+sha512sums=('b7f50ada138c7f93eb7eb1631efccd1d9f03a5e77b6c13c8b757017b2d462e19d2d3e01c50fad60a4ae1bc86d431f6f94c72c11ff410c25121e571953017cb67'
+	'c8e6efecb9e4c0608b6d455ca1c5d604c0a4f9aa431d38f2d7a445bf6c164178403f8b714164777f42248912cae9b401effb16e126054a9ee9f94d887aca5b50'
+	'e79ce1faef91a6130a4d2f8ea9476d34f93a2ac16ec5e39722eceb3b02be6cb812575df1ceabdbcf906b12663190365714106f65592127769379cc317d007df2'
+	)
 
-_architectures="i686-w64-mingw32 x86_64-w64-mingw32"
+_architectures="i386-mingw32crt"
+
+prepare() {
+	cd zlib-"$pkgver"/
+	patch -p0 < ../no-wide-char.patch
+	patch -p0 < ../no-gzopen-w-export.patch
+}
 
 build() {
-  for _arch in ${_architectures}; do
-    rm -rf "${srcdir}/build-${_arch}"
-  	cp -r "${srcdir}/zlib-${pkgver}" "${srcdir}/build-${_arch}"
-  	cd "${srcdir}/build-${_arch}"
-  	sed -ie "s,dllwrap,${_arch}-dllwrap," win32/Makefile.gcc
-  	
-  	CFLAGS="-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions --param=ssp-buffer-size=4" \
-    ./configure --prefix=/usr/${_arch} -shared -static
-  	make -f win32/Makefile.gcc \
-  	    CC=${_arch}-gcc \
-    	AR=${_arch}-ar \
-    	RC=${_arch}-windres \
-    	STRIP=${_arch}-strip \
-    	IMPLIB=libz.dll.a \
-    	CFLAGS="-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions --param=ssp-buffer-size=4"
-  done
+	for _arch in ${_architectures}; do
+		rm -rf "${srcdir}/build-${_arch}"
+		cp -r "${srcdir}/zlib-${pkgver}" "${srcdir}/build-${_arch}"
+		cd "${srcdir}/build-${_arch}"
+
+		LTO_FLAGS="-Os -s -flto -fuse-linker-plugin -flto-partition=none"
+
+		make -f win32/Makefile.gcc \
+			PREFIX=${_arch}- \
+			CC=${_arch}-gcc \
+			AR=${_arch}-gcc-ar \
+			RC=${_arch}-windres \
+			STRIP=${_arch}-strip \
+			IMPLIB=libz.dll.a \
+			CFLAGS="$LTO_FLAGS" \
+			LDFLAGS="$LTO_FLAGS"
+	done
 }
 
 package () {
-  for _arch in ${_architectures}; do
-    cd "${srcdir}/build-${_arch}"
-    install -d "${pkgdir}/usr/${_arch}/"{bin,include,lib}
-    install -m644 -t "${pkgdir}/usr/${_arch}/include" zlib.h zconf.h
-    install -m644 -t "${pkgdir}/usr/${_arch}/lib" libz.a libz.dll.a
-    install -m755 -t "${pkgdir}/usr/${_arch}/bin" zlib1.dll
-    install -d "${pkgdir}/usr/${_arch}/lib/pkgconfig"
-    
-    sed "s,@prefix@,/usr/${_arch},;s,@exec_prefix@,\${prefix},;s,@libdir@,\${exec_prefix}/lib,;s,@sharedlibdir@,\${libdir},;s,@includedir@,\${prefix}/include,;s,@VERSION@,$pkgver," < zlib.pc.in > "${pkgdir}/usr/${_arch}/lib/pkgconfig/zlib.pc"
-    
-    ${_arch}-strip -x -g "${pkgdir}/usr/${_arch}/bin/"*.dll
-    ${_arch}-strip -g "${pkgdir}/usr/${_arch}/lib/"*.a
-  done
+	for _arch in ${_architectures}; do
+		cd "${srcdir}/build-${_arch}"
+		install -d "${pkgdir}/usr/${_arch}/"{bin,include,lib}
+		install -m644 -t "${pkgdir}/usr/${_arch}/include" zlib.h zconf.h
+		install -m644 -t "${pkgdir}/usr/${_arch}/lib" libz.a libz.dll.a
+		install -m755 -t "${pkgdir}/usr/${_arch}/bin" zlib1.dll
+		install -d "${pkgdir}/usr/${_arch}/lib/pkgconfig"
+
+		sed "s,@prefix@,/usr/${_arch},;s,@exec_prefix@,\${prefix},;s,@libdir@,\${exec_prefix}/lib,;s,@sharedlibdir@,\${libdir},;s,@includedir@,\${prefix}/include,;s,@VERSION@,$pkgver," < zlib.pc.in > "${pkgdir}/usr/${_arch}/lib/pkgconfig/zlib.pc"
+	done
 }

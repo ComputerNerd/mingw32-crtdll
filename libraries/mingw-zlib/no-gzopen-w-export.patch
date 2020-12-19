@@ -1,0 +1,7 @@
+--- win32/zlib.def.bak
++++ win32/zlib.def
+@@ -91,4 +91,3 @@
+     inflateCodesUsed
+     inflateResetKeep
+     deflateResetKeep
+-    gzopen_w
