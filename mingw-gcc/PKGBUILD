@@ -66,6 +66,10 @@ prepare() {
   echo '' > 'libstdc++-v3/src/c++17/fs_ops.cc'
   echo '' > 'libstdc++-v3/src/c++17/fs_dir.cc'
   echo '' > 'libstdc++-v3/src/c++17/fs_path.cc'
+
+  # The semaphores are not named so there is no reason to use the wide character version.
+  sed -i 's/CreateSemaphoreW/CreateSemaphoreA/g' libgcc/config/i386/gthr-win32.c
+  sed -i 's/CreateSemaphoreW/CreateSemaphoreA/g' libgcc/config/i386/gthr-win32.h
 }
 
 build() {
