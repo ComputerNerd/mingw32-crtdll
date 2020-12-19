@@ -53,6 +53,8 @@ prepare() {
 
   # Get rid of a hard coded -lmsvcrt, otherwise the code depends on both CRTDLL.dll and MSVCRT.dll
   sed -i 's/lmsvcrt/lcrtdll/g' "libgcc/config/i386/t-mingw32"
+  # It just so happens that moldname doesn't get used but just to be sure replace it with coldname which is used for CRTDLL.
+  sed -i 's/moldname/coldname/g' "libgcc/config/i386/t-mingw32"
 
   patch -p0 -i ../nowinxp1.patch
   patch -p0 -i ../nowinxp2.patch
@@ -84,9 +86,10 @@ build() {
 	export glibcxx_cv_c99_wchar_cxx11=no
 	export glibcxx_cv_c99_wchar_cxx98=no
 	export have_mbstate_t=no
+	CFLAGS="-Os -DWINVER=0x0400 -D_WIN32_WINNT=0x0400 -DNTDDI_VERSION=0x04000000"
   for _arch in ${_architectures}; do
     mkdir -p "$srcdir"/build-${_arch} && cd "$srcdir"/build-${_arch}
-    CFLAGS_FOR_TARGET="-Os -DWINVER=0x0400 -D_WIN32_WINNT=0x0400 -DNTDDI_VERSION=0x04000000" CXXFLAGS_FOR_TARGET="-Os -DWINVER=0x0400 -D_WIN32_WINNT=0x0400 -DNTDDI_VERSION=0x04000000" "$srcdir"/gcc/configure --prefix=/usr --libexecdir=/usr/lib \
+    CFLAGS_FOR_TARGET="$CFLAGS" CXXFLAGS_FOR_TARGET="$CFLAGS" HOST_LIBGCC2_CFLAGS="$CFLAGS" "$srcdir"/gcc/configure --prefix=/usr --libexecdir=/usr/lib \
         --target=${_arch} \
         --with-bugurl=https://bugs.archlinux.org/ \
         --enable-languages=c,lto,c++ \
